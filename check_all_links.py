@@ -133,11 +133,11 @@ def testUrls(urls):
         print("{}/{} : ".format(count, len(urls)), end="")
         row = testUrl(url)
         rows.append(row)
+        if count % 299 == 0:
+            writeCSV(rows) # writing to CSV
         if count % 50 == 0:
             print("sleeping 5 seconds...opportunity to pause")
             time.sleep(5)
-        if count % 500 == 0:
-            writeCSV(rows) # writing to CSV
     return rows
 
 def getUrls(csvFile):
