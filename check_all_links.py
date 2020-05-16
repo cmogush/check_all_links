@@ -88,11 +88,16 @@ def pingURL(url):
         redirectedURL = finalURL
     return redirectedURL
 
-def redirectedResult(redirected, url, https):
-    if redirected is None and https:
+def redirectedResult(redirected, url, urlFormatted, https):
+    if redirected is None and https and not urlFormated:
         print('Success')
         result = 'Success'
         details = ''
+    elif redirected is None and https and urlFormatted:
+        print('Bad Syntax | Update URL | {}'.format(url))
+        result = 'Failed - Syntax'
+        details = 'Update URL'
+        redirected = url
     elif redirected is None:
         print('Change to Http | {}'.format(url))
         result = 'Https Failed'
@@ -107,15 +112,20 @@ def redirectedResult(redirected, url, https):
 def testUrl(url):
     socket.setdefaulttimeout(30)
     row = {'UNIQUE_DOMAINS': url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
-    print("{} ".format(url), end="")
+    print("{} ".format(url), end="") #OG url
+    urlFormatted = False
+    if not url == url.strip().lower():
+        url = url.strip().lower()
+        urlFormatted = True
     try:
         redirected = pingURL(url)
-        row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected,  url, True)
+        row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected,  url, urlFormatted, True)
     except urllib.error.HTTPError as e:
         url = re.sub('https','http',url)
         try:
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected, url, False)
+            row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected, url, urlFormatted, False)
+
         except:
             print("{} | {}".format(e.code, getErrorDetails(e.code)))
             row['Result'] = e.code
@@ -124,7 +134,7 @@ def testUrl(url):
         url = re.sub('https', 'http', url)
         try:
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected,  url, False)
+            row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected,  url, urlFormatted, False)
         except:
             print('Failed')
             row['Result'] = 'Failed to connect'
@@ -161,10 +171,13 @@ def writeCSV(rows):
         writer.writerows(rows)  # turns the dictionaries into csv
 
 def main():
-    urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains.csv')
-    rows = testUrls(urls)
-    writeCSV(rows)
-    # testUrl("https://bookbuilder.cast.org")
+    """main method"""
+    # urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains.csv')
+    # rows = testUrls(urls)
+    # writeCSV(rows)
+
+    #for testing purposes
+    testUrl("https://Myplate.gov ")
 
 if __name__ == "__main__":
     main()
