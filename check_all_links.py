@@ -8,18 +8,6 @@ import msvcrt
 import time
 import re
 
-answer = None
-
-# def get_url_nofollow(url):
-#     try:
-#         response = urllib.urlopen(url)
-#         code = response.getcode()
-#         return code
-#     except urllib2.HTTPError as e:
-#         return e.code
-#     except:
-#         return 0
-
 def getErrorDetails(response):
     responses = {
         100: ('Continue', 'Request received, please continue'),
@@ -113,16 +101,16 @@ def redirectedResult(redirected):
 
 def testUrl(url):
     socket.setdefaulttimeout(30)
-    row = {'UNIQUE_DOMAINS': url, 'Result': "", 'Details': "", 'Redirected': ""}
+    row = {'UNIQUE_DOMAINS': url, 'Result': "", 'Details': "", 'RedirectedURL': ""}
     print("{} ".format(url), end="")
     try:
         redirected = pingURL(url)
-        row['Result'], row['Details'], row['Redirected'] = redirectedResult(redirected)
+        row['Result'], row['Details'], row['RedirectedURL'] = redirectedResult(redirected)
     except urllib.error.HTTPError as e:
         url = re.sub('https','http',url)
         try:
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['Redirected'] = redirectedResult(redirected)
+            row['Result'], row['Details'], row['RedirectedURL'] = redirectedResult(redirected)
         except:
             print(e.code)
             row['Result'] = e.code
@@ -131,10 +119,11 @@ def testUrl(url):
         url = re.sub('https', 'http', url)
         try:
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['Redirected'] = redirectedResult(redirected)
+            row['Result'], row['Details'], row['RedirectedURL'] = redirectedResult(redirected)
         except:
             print('Failed')
             row['Result'] = 'Failed to connect'
+    return row
 
 def testUrls(urls):
     rows = []
@@ -160,30 +149,17 @@ def getUrls(csvFile):
     return urlList
 
 def writeCSV(rows):
-    keys = ['UNIQUE_DOMAINS', 'Result', 'Details']
+    keys = ['UNIQUE_DOMAINS', 'Result', 'Details', 'RedirectedURL']
     with open('CPUniqueDomains_result.csv', 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
         writer.writeheader()  # will create first line based on keys
         writer.writerows(rows)  # turns the dictionaries into csv
 
 def main():
-    # urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\eswLinkCheck\CPUniqueDomains.csv')
-    # rows = testUrls(urls)
-    # writeCSV(rows)
-    testUrl("https://bookbuilder.cast.org")
-    #
-    # for line in sys.stdin.readlines():
-    #     line = line.strip()
-    #     if line not in urls:
-    #         sys.stderr.write("+ checking URL: %s\n" % line)
-    #         urls[line] = {'code': get_url_nofollow(line), 'count': 1}
-    #         sys.stderr.write("++ %s\n" % str(urls[line]))
-    #     else:
-    #         urls[line]['count'] = urls[line]['count'] + 1
-    #
-    # for url in urls:
-    #     if urls[url]['code'] != 200:
-    #         print("%d\t%d\t%s" % (urls[url]['count'], urls[url]['code'], url))
+    urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains.csv')
+    rows = testUrls(urls)
+    writeCSV(rows)
+    # testUrl("https://bookbuilder.cast.org")
 
 if __name__ == "__main__":
     main()
