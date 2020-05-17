@@ -9,6 +9,7 @@ import time
 import re
 
 def getErrorDetails(response):
+    """returns the corresponding details for the Error Code"""
     responses = {
         100: ('Continue', 'Request received, please continue'),
         101: ('Switching Protocols',
@@ -79,6 +80,7 @@ def getErrorDetails(response):
     return ""
 
 def pingURL(url):
+    """pings the given url and, if redirected, returns a redirected URL"""
     redirectedURL = None
     req = urllib.request.Request(url, headers={'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"})
     r = urllib.request.urlopen(req)
@@ -88,7 +90,8 @@ def pingURL(url):
         redirectedURL = finalURL
     return redirectedURL
 
-def redirectedResult(redirected, url, urlFormatted, https):
+def formatRow(redirected, url, urlFormatted, https):
+    """format the row based on the resulting variables"""
     if redirected is None and https and not urlFormatted:
         print('Success')
         result = 'Success'
@@ -110,6 +113,7 @@ def redirectedResult(redirected, url, urlFormatted, https):
     return result, details, redirected
 
 def testUrl(url):
+    """function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row"""
     socket.setdefaulttimeout(30)
     row = {'UNIQUE_DOMAINS': url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
     print("{} ".format(url), end="") #OG url
@@ -119,12 +123,12 @@ def testUrl(url):
         urlFormatted = True
     try:
         redirected = pingURL(url)
-        row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected,  url, urlFormatted, True)
+        row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected,  url, urlFormatted, True)
     except urllib.error.HTTPError as e:
         url = re.sub('https','http',url)
         try:
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected, url, urlFormatted, False)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, url, urlFormatted, False)
 
         except:
             print("{} | {}".format(e.code, getErrorDetails(e.code)))
@@ -134,13 +138,14 @@ def testUrl(url):
         url = re.sub('https', 'http', url)
         try:
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = redirectedResult(redirected,  url, urlFormatted, False)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected,  url, urlFormatted, False)
         except:
             print('Failed')
             row['Result'] = 'Failed to connect'
     return row
 
 def testUrls(urls):
+    """functions to test a list of urls; returns a list of dictionaries used for writing a CSV"""
     rows = []
     count = 0
     for url in urls:
@@ -156,6 +161,7 @@ def testUrls(urls):
     return rows
 
 def getUrls(csvFile):
+    """extracts urls from a CSV file; returns results as a list"""
     urlList = []
     with open(csvFile, 'r') as csv_f:
         reader = csv.DictReader(csv_f)
@@ -164,6 +170,7 @@ def getUrls(csvFile):
     return urlList
 
 def writeCSV(rows):
+    """functions to write dictionary list 'rows' to a CSV"""
     keys = ['UNIQUE_DOMAINS', 'Result', 'Details', 'UpdatedURL']
     with open('CPUniqueDomains_result.csv', 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
