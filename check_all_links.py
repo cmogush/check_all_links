@@ -84,12 +84,12 @@ def pingURL(url):
     r = urllib.request.urlopen(req)
     ogURL = req.get_full_url()
     finalURL = r.geturl()
-    if ogURL != finalURL:
+    if ogURL != finalURL and ogURL != finalURL+"/":
         redirectedURL = finalURL
     return redirectedURL
 
 def redirectedResult(redirected, url, urlFormatted, https):
-    if redirected is None and https and not urlFormated:
+    if redirected is None and https and not urlFormatted:
         print('Success')
         result = 'Success'
         details = ''
@@ -172,12 +172,11 @@ def writeCSV(rows):
 
 def main():
     """main method"""
-    # urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains.csv')
-    # rows = testUrls(urls)
-    # writeCSV(rows)
+    urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains.csv')
+    rows = testUrls(urls)
+    writeCSV(rows)
 
-    #for testing purposes
-    testUrl("https://Myplate.gov ")
+    # testUrl("https://www.architecturaldigest.com")  # for testing purposes
 
 if __name__ == "__main__":
     main()
