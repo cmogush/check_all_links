@@ -95,18 +95,18 @@ def formatRow(redirected, url, urlFormatted, https):
         details = ''
     elif redirected is None and https and urlFormatted:  # successful but original URL needs reformatted
         print('Bad Syntax | Update URL | {}'.format(url))
-        result = 'Failed - Syntax'
-        details = 'Update URL'
+        result = 'Failed - Bad Syntax'
+        details = 'Failed because of capitalization, spacing, or other bad syntax; Successful as reformatted'
         redirected = url
     elif redirected is None:   # successful but original URL needs to be changed from https to http
-        print('Change to Http | {}'.format(url))
-        result = 'Https Failed'
-        details = 'Change to Http'
+        print('Change to http | {}'.format(url))
+        result = 'Failed - https'
+        details = 'Failed with https; Successful as http'
         redirected = url
     else:
         print('Redirected | Update URL | {}'.format(redirected))  # successful but URL needs updated to RedirectedURL
         result = 'Redirected'
-        details = 'Update URL'
+        details = 'URL should be updated to match Redirected URL'
     return result, details, redirected
 
 
@@ -182,12 +182,14 @@ def writeCSV(rows):
 
 def main():
     """main method"""
-    urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains.csv')
+    timer = time.time()
+    urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_small.csv')
     rows = testUrls(urls)
     writeCSV(rows)
 
     # testUrl("https://www.architecturaldigest.com")  # for testing purposes
 
+    print("{} seconds elapsed".format(time.time() - timer))
 
 if __name__ == "__main__":
     main()
