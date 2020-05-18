@@ -1,7 +1,17 @@
-import sys, csv, time, re, socket, urllib.request
+import sys, csv, time, re, socket, urllib.request, concurrent.futures, queue
 from urllib.error import URLError, HTTPError
 from urllib.request import urlopen, Request
 
+def getUrls(csvFile):
+    """extracts urls from a CSV file; returns results as a list"""
+    urlList = []
+    with open(csvFile, 'r') as csv_f:
+        reader = csv.DictReader(csv_f)
+        for row in reader:
+            urlList.append(row['UNIQUE_DOMAINS'])
+    return urlList
+
+urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # global variable
 
 def getErrorDetails(response):
     """returns the corresponding details for the Error Code"""
@@ -87,8 +97,9 @@ def pingURL(url):
     return redirectedURL
 
 
-def formatRow(redirected, url, urlFormatted, https):
+def formatRow(redirected, ogURL, url, urlFormatted, https):
     """format the row based on the resulting variables"""
+    print("{} / {} {} ".format(urls.index(ogURL), len(urls), url), end="")  # OG url
     if redirected is None and https and not urlFormatted:  # successful condition
         print('Success')
         result = 'Success'
@@ -114,35 +125,85 @@ def testUrl(url):
     """function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row"""
     socket.setdefaulttimeout(30)
     row = {'UNIQUE_DOMAINS': url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
-    print("{} ".format(url), end="")  # OG url
     # setup the url for testing, make note if it had to be reformatted
     urlFormatted = False
+    ogURL = url
     if not url == url.strip().lower():
         url = url.strip().lower()
         urlFormatted = True
     # begin testing the url
     try: # test url with no changes
         redirected = pingURL(url)
-        row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, url, urlFormatted, True)
+        row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, True)
     except urllib.error.HTTPError as e:  # catch the HTTPError (response code)
         url = re.sub('https', 'http', url)
         try:  # try again with http, instead of https
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, url, urlFormatted, False)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
         except:  # failed with error code
-            print("{} | {}".format(e.code, getErrorDetails(e.code)))
+            print("{} / {} {} {} | {}".format(urls.index(ogURL), len(urls), ogURL, e.code, getErrorDetails(e.code)))
             row['Result'] = e.code
             row['Details'] = getErrorDetails(e.code)
     except:  # catch all other errors
         url = re.sub('https', 'http', url)
         try:  # try again with http, instead of https
             redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, url, urlFormatted, False)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
         except:  # failed without error code
-            print('Failed')
+            print("{} / {} {} Failed ".format(urls.index(ogURL), len(urls), ogURL))  # OG url
             row['Result'] = 'Failed to connect'
     return row
 
+def feed_the_workers(q, urls, spacing):
+    """ Simulate outside actors sending in work to do """
+    time.sleep(spacing)
+    for url in urls:
+        q.put(url)
+    return "DONE FEEDING"
+
+def testUrlsParallel(urls):
+    """ Test a list of urls in parallel; returns a list of dictionaries used for writing a CSV """
+    q = queue.Queue()
+    rows = []
+    count = 0
+    # We can use a with statement to ensure threads are cleaned up promptly
+    with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
+
+        # start a future for a thread which sends work in through the queue
+        future_to_url = {
+            executor.submit(feed_the_workers, q, urls, 0.25): 'FEEDER DONE'}
+
+        while future_to_url:
+            # check for status of the futures which are currently working
+            done, not_done = concurrent.futures.wait(
+                future_to_url, timeout=0.25,
+                return_when=concurrent.futures.FIRST_COMPLETED)
+
+            # if there is incoming work, start a new future
+            while not q.empty():
+                # fetch a url from the queue
+                url = q.get()
+
+                # Start the load operation and mark the future with its URL
+                future_to_url[executor.submit(testUrl, url)] = url
+
+            # process any completed futures
+            for future in done:
+                url = future_to_url[future]
+                try:
+                    row = future.result()
+                    if not url == 'FEEDER DONE':
+                        rows.append(row)
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (url, exc))
+                else:
+                    if url == 'FEEDER DONE':
+                        print(url)
+
+                # remove the now completed future
+                del future_to_url[future]
+        rows = sorted(rows, key = lambda i: i['UNIQUE_DOMAINS'])
+    return rows
 
 def testUrls(urls):
     """functions to test a list of urls; returns a list of dictionaries used for writing a CSV"""
@@ -161,16 +222,6 @@ def testUrls(urls):
     return rows
 
 
-def getUrls(csvFile):
-    """extracts urls from a CSV file; returns results as a list"""
-    urlList = []
-    with open(csvFile, 'r') as csv_f:
-        reader = csv.DictReader(csv_f)
-        for row in reader:
-            urlList.append(row['UNIQUE_DOMAINS'])
-    return urlList
-
-
 def writeCSV(rows):
     """functions to write dictionary list 'rows' to a CSV"""
     keys = ['UNIQUE_DOMAINS', 'Result', 'Details', 'UpdatedURL']
@@ -182,14 +233,23 @@ def writeCSV(rows):
 
 def main():
     """main method"""
+
+    # # single process
+    # print("Started {}".format(time.ctime()))
+    # timer = time.time()
+    # rows = testUrls(urls)
+    # print("Ended {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+    # writeCSV(rows)
+
+    # parallel process
+    print("Started {}".format(time.ctime()))
     timer = time.time()
-    urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_small.csv')
-    rows = testUrls(urls)
+    rows = testUrlsParallel(urls)
     writeCSV(rows)
+    print("Ended {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
 
     # testUrl("https://www.architecturaldigest.com")  # for testing purposes
 
-    print("{} seconds elapsed".format(time.time() - timer))
 
 if __name__ == "__main__":
     main()
