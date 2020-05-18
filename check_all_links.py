@@ -7,10 +7,11 @@ def readCSV(csvFile):
     urlList = []
     with open(csvFile, 'r') as csv_f:
         reader = csv.DictReader(csv_f)
-        headers = reader.__next__()  # get the headers
-        url_header = list(headers)[0]
-        print(url_header)
+        headers = reader.__next__()  # get first row
+        url_header = list(headers)[0]  # get headers
+        urlList.append(headers[url_header])  # append header row
         for row in reader:
+            print(row)
             urlList.append(row[url_header])
     return urlList, url_header
 
@@ -262,9 +263,9 @@ def restoreProgress(partial_csv):
 
 def main():
     """main method"""
-    print("Restore progress from a partially completed CSV?)")
+    print("You may restore progress from a partially completed CSV")
     print("Note: columns must match this exact order: url | result | details | updated url")
-    if(input("Input (y/n): ") == 'y'):
+    if(input("Restore (y/n): ") == 'y'):
         partial_csv = input("Enter full path to partial csv: ")
         # partial_csv = r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_result_parallel.csv' # testing
         restoreProgress(partial_csv)
@@ -278,11 +279,11 @@ def main():
     # writeCSV(rows)
 
     # parallel process
-    print("Started {}".format(time.ctime()))
+    print("Start {}".format(time.ctime()))
     timer = time.time()
     rows = testUrlsParallel(urls)
     writeCSV(rows)
-    print("Ended {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+    print("Completed {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
 
     # testUrl("https://www.architecturaldigest.com")  # for testing purposes
 
