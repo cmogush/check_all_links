@@ -11,7 +11,6 @@ def readCSV(csvFile):
         url_header = list(headers)[0]  # get headers
         urlList.append(headers[url_header])  # append header row
         for row in reader:
-            print(row)
             urlList.append(row[url_header])
     return urlList, url_header
 
@@ -110,23 +109,22 @@ def pingURL(url):
 
 def formatRow(redirected, ogURL, url, urlFormatted, https):
     """format the row based on the resulting variables"""
-    print("{} / {} {} ".format(urls.index(ogURL)+1, len(urls), url), end="")  # OG url
     if redirected is None and https and not urlFormatted:  # successful condition
-        print('Success')
+        print("{}/{} {} Success".format(urls.index(ogURL)+1, len(urls), ogURL))
         result = 'Success'
         details = ''
     elif redirected is None and https and urlFormatted:  # successful but original URL needs reformatted
-        print('Bad Syntax | Update URL | {}'.format(url))
+        print("{}/{} {} Bad Syntax | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, url))
         result = 'Failed - Bad Syntax'
         details = 'Failed because of capitalization, spacing, or other bad syntax; Successful as reformatted'
         redirected = url
     elif redirected is None:   # successful but original URL needs to be changed from https to http
-        print('Change to http | {}'.format(url))
+        print("{}/{} {} Change to http | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, url))
         result = 'Failed - https'
         details = 'Failed with https; Successful as http'
         redirected = url
-    else:
-        print('Redirected | Update URL | {}'.format(redirected))  # successful but URL needs updated to RedirectedURL
+    else: # successful but URL needs updated to RedirectedURL
+        print("{}/{} {} Redirected | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, redirected))
         result = 'Redirected'
         details = 'URL should be updated to match Redirected URL'
     return result, details, redirected
@@ -162,7 +160,8 @@ def testUrl(url):
             row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
         except:  # failed without error code
             print("{} / {} {} Failed ".format(urls.index(ogURL)+1, len(urls), ogURL))  # OG url
-            row['Result'] = 'Failed to connect'
+            row['Result'] = 'Failed'
+            row['Details'] = 'Failed to establish a connection'
     return row
 
 def feed_the_workers(q, urls, spacing):
@@ -226,15 +225,12 @@ def testUrls(urls):
     rows = []
     count = 0
     for url in urls:
+        print("Testing ", end="")
         count += 1
-        print("{}/{} : ".format(count, len(urls)), end="")
         row = testUrl(url)
         rows.append(row)
-        if count % 299 == 0:
+        if count % 100 == 0:
             writeCSV(rows)  # writing to CSV
-        if count % 50 == 0:
-            print("sleeping 5 seconds...opportunity to pause")
-            time.sleep(5)
     return rows
 
 def writeCSV(rows):
@@ -246,20 +242,41 @@ def writeCSV(rows):
         writer.writeheader()  # will create first line based on keys
         writer.writerows(rows)  # turns the dictionaries into csv
 
+def checkRowComplete(row, header):
+    if row[list(header)[1]]:  # if row has results already, add it finished list of dictionaries (rows)
+        urls.remove(row[list(header)[0]])  # remove header row from urls list
+        rows.append({url_column: row[list(header)[0]], 'Result': row[list(header)[1]],
+                     'Details': row[list(header)[2]], 'UpdatedURL': row[list(header)[3]]})
+        return 1 # add one to the count if row imported
+    return 0 # else the count remains the same
+
+
 def restoreProgress(partial_csv):
     """ Restore the progress from a partially finished CSV output """
+    count = 0
     with open(partial_csv, 'r') as csv_f:
         reader = csv.DictReader(csv_f)
         header = reader.__next__() # get the headers
-        count = 0
+        count += checkRowComplete(header, header)
+        # repeat for all remaining rows
         for row in reader:
-            if list(header)[1]: # see if the row is completed, if so, add it to finished list of dictionaries
-                rows.append({url_column: row[list(header)[0]], 'Result': row[list(header)[1]],
-                'Details': row[list(header)[2]], 'UpdatedURL': row[list(header)[3]]})
-                urls.remove(row[url_column]) # remove the finished url from the list to check
-                count += 1
+            count += checkRowComplete(row, header)
     print("{} rows read in from {}".format(count, os.path.basename(partial_csv)))
     time.sleep(1)
+
+def errorChecking():
+    """ Retry any rows which have failed with the single-process function, testUrls """
+    urls.clear()
+    global rows
+    for row in rows:
+        if row['Result'] == 'Failed':
+            # add to list to retry and remove row from rows
+            urls.append(row[url_column])  # add url to retry
+            rows.remove(row)
+    rows += testUrls(urls)
+    rows = sorted(rows, key=lambda i: i[url_column])
+    writeCSV(rows)
+
 
 def main():
     """main method"""
@@ -284,6 +301,14 @@ def main():
     rows = testUrlsParallel(urls)
     writeCSV(rows)
     print("Completed {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+
+    if(input("Perform error checking? (y/n): ") == 'y'):
+        print("Start {}".format(time.ctime()))
+        timer = time.time()
+        errorChecking()
+        print("Completed {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+
+
 
     # testUrl("https://www.architecturaldigest.com")  # for testing purposes
 
