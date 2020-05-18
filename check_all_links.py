@@ -1,17 +1,27 @@
-import sys, csv, time, re, socket, urllib.request, concurrent.futures, queue
+import sys, csv, time, re, socket, urllib.request, concurrent.futures, queue, os
 from urllib.error import URLError, HTTPError
 from urllib.request import urlopen, Request
 
-def getUrls(csvFile):
-    """extracts urls from a CSV file; returns results as a list"""
+def readCSV(csvFile):
+    """ Extracts urls from a CSV file; returns results as a list"""
     urlList = []
     with open(csvFile, 'r') as csv_f:
         reader = csv.DictReader(csv_f)
+        headers = reader.__next__()  # get the headers
+        url_header = list(headers)[0]
+        print(url_header)
         for row in reader:
-            urlList.append(row['UNIQUE_DOMAINS'])
-    return urlList
+            urlList.append(row[url_header])
+    return urlList, url_header
 
-urls = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # global variable
+""" Setup global variables """
+rows = []
+# inputs
+csv_file = input("Enter full path to csv to be read in: ")
+urls, url_column = readCSV(csv_file)
+
+# urls, url_column = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # testing
+
 
 def getErrorDetails(response):
     """returns the corresponding details for the Error Code"""
@@ -99,7 +109,7 @@ def pingURL(url):
 
 def formatRow(redirected, ogURL, url, urlFormatted, https):
     """format the row based on the resulting variables"""
-    print("{} / {} {} ".format(urls.index(ogURL), len(urls), url), end="")  # OG url
+    print("{} / {} {} ".format(urls.index(ogURL)+1, len(urls), url), end="")  # OG url
     if redirected is None and https and not urlFormatted:  # successful condition
         print('Success')
         result = 'Success'
@@ -124,7 +134,7 @@ def formatRow(redirected, ogURL, url, urlFormatted, https):
 def testUrl(url):
     """function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row"""
     socket.setdefaulttimeout(30)
-    row = {'UNIQUE_DOMAINS': url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
+    row = {url_column: url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
     # setup the url for testing, make note if it had to be reformatted
     urlFormatted = False
     ogURL = url
@@ -141,7 +151,7 @@ def testUrl(url):
             redirected = pingURL(url)
             row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
         except:  # failed with error code
-            print("{} / {} {} {} | {}".format(urls.index(ogURL), len(urls), ogURL, e.code, getErrorDetails(e.code)))
+            print("{} / {} {} {} | {}".format(urls.index(ogURL)+1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
             row['Result'] = e.code
             row['Details'] = getErrorDetails(e.code)
     except:  # catch all other errors
@@ -150,7 +160,7 @@ def testUrl(url):
             redirected = pingURL(url)
             row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
         except:  # failed without error code
-            print("{} / {} {} Failed ".format(urls.index(ogURL), len(urls), ogURL))  # OG url
+            print("{} / {} {} Failed ".format(urls.index(ogURL)+1, len(urls), ogURL))  # OG url
             row['Result'] = 'Failed to connect'
     return row
 
@@ -164,7 +174,6 @@ def feed_the_workers(q, urls, spacing):
 def testUrlsParallel(urls):
     """ Test a list of urls in parallel; returns a list of dictionaries used for writing a CSV """
     q = queue.Queue()
-    rows = []
     count = 0
     # We can use a with statement to ensure threads are cleaned up promptly
     with concurrent.futures.ThreadPoolExecutor(max_workers=None) as executor:
@@ -193,7 +202,13 @@ def testUrlsParallel(urls):
                 try:
                     row = future.result()
                     if not url == 'FEEDER DONE':
+                        global rows # pull in the global variable
                         rows.append(row)
+                        # # checkpoint to write to CSV
+                        if (urls.index(row[url_column])+1) % 100 == 0: # write every 100 rows
+                            tempRows = rows
+                            tempRows = sorted(rows, key=lambda i: i[url_column])
+                            writeCSV(tempRows)
                 except Exception as exc:
                     print('%r generated an exception: %s' % (url, exc))
                 else:
@@ -202,7 +217,7 @@ def testUrlsParallel(urls):
 
                 # remove the now completed future
                 del future_to_url[future]
-        rows = sorted(rows, key = lambda i: i['UNIQUE_DOMAINS'])
+        rows = sorted(rows, key = lambda i: i[url_column])
     return rows
 
 def testUrls(urls):
@@ -221,20 +236,41 @@ def testUrls(urls):
             time.sleep(5)
     return rows
 
-
 def writeCSV(rows):
     """functions to write dictionary list 'rows' to a CSV"""
-    keys = ['UNIQUE_DOMAINS', 'Result', 'Details', 'UpdatedURL']
+    keys = [url_column, 'Result', 'Details', 'UpdatedURL']
     with open('CPUniqueDomains_result.csv', 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
+        print ("writing to CSV")
         writer.writeheader()  # will create first line based on keys
         writer.writerows(rows)  # turns the dictionaries into csv
 
+def restoreProgress(partial_csv):
+    """ Restore the progress from a partially finished CSV output """
+    with open(partial_csv, 'r') as csv_f:
+        reader = csv.DictReader(csv_f)
+        header = reader.__next__() # get the headers
+        count = 0
+        for row in reader:
+            if list(header)[1]: # see if the row is completed, if so, add it to finished list of dictionaries
+                rows.append({url_column: row[list(header)[0]], 'Result': row[list(header)[1]],
+                'Details': row[list(header)[2]], 'UpdatedURL': row[list(header)[3]]})
+                urls.remove(row[url_column]) # remove the finished url from the list to check
+                count += 1
+    print("{} rows read in from {}".format(count, os.path.basename(partial_csv)))
+    time.sleep(1)
 
 def main():
     """main method"""
+    print("Restore progress from a partially completed CSV?)")
+    print("Note: columns must match this exact order: url | result | details | updated url")
+    if(input("Input (y/n): ") == 'y'):
+        partial_csv = input("Enter full path to partial csv: ")
+        # partial_csv = r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_result_parallel.csv' # testing
+        restoreProgress(partial_csv)
 
-    # # single process
+
+    # single process
     # print("Started {}".format(time.ctime()))
     # timer = time.time()
     # rows = testUrls(urls)
