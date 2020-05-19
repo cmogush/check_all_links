@@ -155,7 +155,7 @@ def testUrl(url):
             except: # try OG url again with http, instead of
                 try:
                     url = re.sub('https', 'http', ogURL)
-                    redirected = pingURL(ogURL)
+                    redirected = pingURL(url)
                     row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, False)
                 except:  # failed with error code
                     print("{}/{} {} {} | {}".format(urls.index(ogURL)+1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
@@ -173,7 +173,7 @@ def testUrl(url):
             except:  # try OG url again with http, instead of
                 try:
                     url = re.sub('https', 'http', ogURL)
-                    redirected = pingURL(ogURL)
+                    redirected = pingURL(url)
                     row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, False)
                 except: # all other errors
                     print("{}/{} {} Failed ".format(urls.index(ogURL)+1, len(urls), ogURL))  # OG url
@@ -303,8 +303,6 @@ def main():
         partial_csv = input("Enter full path to partial csv: ")
         restoreProgress(partial_csv)
 
-    print("--------------------------------------------------")
-
     # single process
     # print("Started {}".format(time.ctime()))
     # timer = time.time()
@@ -313,20 +311,24 @@ def main():
     # writeCSV(rows)
 
     # parallel process
+    print("--------------------------------------------------")
     print("Start url processing {}".format(time.ctime()))
+    print("--------------------------------------------------")
     timer = time.time()
     rows = testUrlsParallel(urls)
     writeCSV(rows)
+    print("--------------------------------------------------")
     print("Completed url processing {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
-
     print("--------------------------------------------------")
 
-    if(input("Perform error checking? (y/n): ") == 'y'):
-        print("Start error checking {}".format(time.ctime()))
-        error_timer = time.time()
-        errorChecking()
-        print("Completed error checking {} | {} seconds elapsed".format(time.ctime(), time.time() - error_timer))
-        print("Total run-time {}".format(time.time() - timer))
+    # if(input("Perform error checking? (y/n): ") == 'y'):
+    print("Start error checking {}".format(time.ctime()))
+    print("--------------------------------------------------")
+    error_timer = time.time()
+    errorChecking()
+    print("--------------------------------------------------")
+    print("Completed error checking {} | {} seconds elapsed".format(time.ctime(), time.time() - error_timer))
+    print("Total run-time {}".format(time.time() - timer))
 
 
 if __name__ == "__main__":
