@@ -246,8 +246,8 @@ def testUrls(urls):
         count += 1
         row = testUrl(url)
         rows.append(row)
-        if count % 100 == 0:
-            writeCSV(rows)  # writing to CSV
+        # if count % 10 == 0:
+        #     writeCSV(rows)  # writing to CSV
     return rows
 
 def writeCSV(rows):
@@ -283,13 +283,17 @@ def restoreProgress(partial_csv):
 
 def errorChecking():
     """ Retry any rows which have failed with the single-process function, testUrls """
-    urls.clear()
+    global urls
     global rows
+    urls_check = []
     for row in rows:
-        if row['Result'] == 'Failed' or str(row['Result']) == '404':
+        if row[url_column] not in urls:
+            continue
+        if row['Result'] == 'Failed':
             # add to list to retry and remove row from rows
-            urls.append(row[url_column])  # add url to retry
+            urls_check.append(row[url_column])  # add url to retry
             rows.remove(row)
+    urls = urls_check
     rows += testUrls(urls)
     rows = sorted(rows, key=lambda i: i[url_column])
     writeCSV(rows)
@@ -329,7 +333,6 @@ def main():
     print("--------------------------------------------------")
     print("Completed error checking {} | {} seconds elapsed".format(time.ctime(), time.time() - error_timer))
     print("Total run-time {}".format(time.time() - timer))
-
 
 if __name__ == "__main__":
     main()
