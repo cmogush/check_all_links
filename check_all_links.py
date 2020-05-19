@@ -129,7 +129,6 @@ def formatRow(redirected, ogURL, url, urlFormatted, https):
         details = 'URL should be updated to match Redirected URL'
     return result, details, redirected
 
-
 def testUrl(url):
     """function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row"""
     socket.setdefaulttimeout(30)
@@ -145,23 +144,41 @@ def testUrl(url):
         redirected = pingURL(url)
         row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, True)
     except urllib.error.HTTPError as e:  # catch the HTTPError (response code)
-        url = re.sub('https', 'http', url)
-        try:  # try again with http, instead of https
-            redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
-        except:  # failed with error code
-            print("{} / {} {} {} | {}".format(urls.index(ogURL)+1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
-            row['Result'] = e.code
-            row['Details'] = getErrorDetails(e.code)
+        try:  # ogURL
+            redirected = pingURL(ogURL)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, True)
+        except:
+            url = re.sub('https', 'http', url)
+            try:  # try again with http, instead of https
+                redirected = pingURL(url)
+                row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
+            except: # try OG url again with http, instead of
+                try:
+                    url = re.sub('https', 'http', ogURL)
+                    redirected = pingURL(ogURL)
+                    row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, False)
+                except:  # failed with error code
+                    print("{}/{} {} {} | {}".format(urls.index(ogURL)+1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
+                    row['Result'] = e.code
+                    row['Details'] = getErrorDetails(e.code)
     except:  # catch all other errors
         url = re.sub('https', 'http', url)
         try:  # try again with http, instead of https
             redirected = pingURL(url)
             row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
-        except:  # failed without error code
-            print("{} / {} {} Failed ".format(urls.index(ogURL)+1, len(urls), ogURL))  # OG url
-            row['Result'] = 'Failed'
-            row['Details'] = 'Failed to establish a connection'
+        except:  # try OG url (might be case specific)
+            try:
+                redirected = pingURL(ogURL)
+                row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, True)
+            except:  # try OG url again with http, instead of
+                try:
+                    url = re.sub('https', 'http', ogURL)
+                    redirected = pingURL(ogURL)
+                    row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, False)
+                except: # all other errors
+                    print("{}/{} {} Failed ".format(urls.index(ogURL)+1, len(urls), ogURL))  # OG url
+                    row['Result'] = 'Failed'
+                    row['Details'] = 'Failed to establish a connection'
     return row
 
 def feed_the_workers(q, urls, spacing):
@@ -236,7 +253,7 @@ def testUrls(urls):
 def writeCSV(rows):
     """functions to write dictionary list 'rows' to a CSV"""
     keys = [url_column, 'Result', 'Details', 'UpdatedURL']
-    with open('CPUniqueDomains_result.csv', 'w', newline='') as csv_file:
+    with open('Result.csv', 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
         print ("writing to CSV")
         writer.writeheader()  # will create first line based on keys
@@ -269,7 +286,7 @@ def errorChecking():
     urls.clear()
     global rows
     for row in rows:
-        if row['Result'] == 'Failed':
+        if row['Result'] == 'Failed' or str(row['Result']) == '404':
             # add to list to retry and remove row from rows
             urls.append(row[url_column])  # add url to retry
             rows.remove(row)
@@ -284,9 +301,9 @@ def main():
     print("Note: columns must match this exact order: url | result | details | updated url")
     if(input("Restore (y/n): ") == 'y'):
         partial_csv = input("Enter full path to partial csv: ")
-        # partial_csv = r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_result_parallel.csv' # testing
         restoreProgress(partial_csv)
 
+    print("--------------------------------------------------")
 
     # single process
     # print("Started {}".format(time.ctime()))
@@ -296,21 +313,20 @@ def main():
     # writeCSV(rows)
 
     # parallel process
-    print("Start {}".format(time.ctime()))
+    print("Start url processing {}".format(time.ctime()))
     timer = time.time()
     rows = testUrlsParallel(urls)
     writeCSV(rows)
-    print("Completed {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+    print("Completed url processing {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+
+    print("--------------------------------------------------")
 
     if(input("Perform error checking? (y/n): ") == 'y'):
-        print("Start {}".format(time.ctime()))
-        timer = time.time()
+        print("Start error checking {}".format(time.ctime()))
+        error_timer = time.time()
         errorChecking()
-        print("Completed {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
-
-
-
-    # testUrl("https://www.architecturaldigest.com")  # for testing purposes
+        print("Completed error checking {} | {} seconds elapsed".format(time.ctime(), time.time() - error_timer))
+        print("Total run-time {}".format(time.time() - timer))
 
 
 if __name__ == "__main__":
