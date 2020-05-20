@@ -28,6 +28,7 @@ def setOutput(csv_file):
             filename = re.sub(pattern, '({})'.format(str(numPlus)), filename)
         outfile = "{}{}".format(filename,ext)
     print("Results will ouput to {}\n".format(outfile))
+    return outfile
 
 
 """ Setup global variables """
@@ -35,7 +36,7 @@ rows = []
 # inputs
 csv_file = input("Enter full path to csv to be read in: ")
 urls, url_column = readCSV(csv_file)
-setOutput(csv_file)
+outfile = setOutput(csv_file)
 # urls, url_column = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # testing
 
 
@@ -273,7 +274,7 @@ def writeCSV(rows):
     keys = [url_column, 'Result', 'Details', 'UpdatedURL']
     with open(outfile, 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
-        print ("writing to CSV")
+        print ("writing to CSV: {}".format(outfile))
         writer.writeheader()  # will create first line based on keys
         writer.writerows(rows)  # turns the dictionaries into csv
 
@@ -332,8 +333,10 @@ def errorChecking():
 
 def discoveryEd(url):
     pattern = r'([a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})'
-    guideAssetID = re.search(pattern, url)
-    return "https://connect.discoveryeducation.com/index.cfm?&cdPartner=BA34-27GQ&cdUser=26DA-9267&guidAssetID={}".format(guideAssetID[1])
+    if re.search(pattern, url):  # see if an asset ID exists, and reformat link if so
+        guideAssetID = re.search(pattern, url)
+        return "https://connect.discoveryeducation.com/index.cfm?&cdPartner=BA34-27GQ&cdUser=26DA-9267&guidAssetID={}".format(guideAssetID[1])
+    return url
 
 
 def main():
