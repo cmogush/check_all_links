@@ -146,58 +146,82 @@ def formatRow(redirected, ogURL, url, urlFormatted, https):
         details = 'URL should be updated to match Redirected URL'
     return result, details, redirected
 
+def subTests(url):
+    """ helper function to try a number of different tests, returns 3 params
+    (result, https [True/False], failed [0 - success / 1 - failed]) """
+    http = re.sub('https','http',url)
+    no_caps = url.lower()
+    http_no_caps = http.lower()
+    failed = 0
+    error = None
+    https = True
+
+    try:  # http
+        return pingURL(http), False, 0
+    except urllib.error.HTTPError as e:
+        error = e.code
+    except:
+        failed = 1
+    try:  # no capitalization
+        return pingURL(no_caps), True, 0
+    except urllib.error.HTTPError as e:
+        error = e.code
+    except:
+        failed = 1
+    try:  # http and no capitalization
+        return pingURL(http_no_caps), False, 0
+    except urllib.error.HTTPError as e:
+        error = e.code
+    except:
+        failed = 1
+
+    if error:
+        return error, False, 1
+    return 'Failed', False, failed
+
+
 def testUrl(url):
     """function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row"""
     socket.setdefaulttimeout(30)
     row = {url_column: url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
+
     # setup the url for testing, make note if it had to be reformatted
     urlFormatted = False
     ogURL = url
-    if not url == url.strip().lower():
-        url = url.strip().lower()
+    if not url == url.strip():
+        url = url.strip()
         urlFormatted = True
     if "discoveryeducation" in url:  # format the url if it's discoveryEd
         url = discoveryEd(url)
+        urlFormatted = True
+
     # begin testing the url
     try: # test url with no changes
         redirected = pingURL(url)
         row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, True)
+
     except urllib.error.HTTPError as e:  # catch the HTTPError (response code)
-        try:  # ogURL
-            redirected = pingURL(ogURL)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, True)
-        except:
-            url = re.sub('https', 'http', url)
-            try:  # try again with http, instead of https
-                redirected = pingURL(url)
-                row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
-            except: # try OG url again with http, instead of
-                try:
-                    url = re.sub('https', 'http', ogURL)
-                    redirected = pingURL(url)
-                    row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, False)
-                except:  # failed with error code
-                    print("{}/{} {} {} | {}".format(urls.index(ogURL)+1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
-                    row['Result'] = e.code
-                    row['Details'] = getErrorDetails(e.code)
+        result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
+        if failed == 0:  #succesful
+            if not https:
+                url = re.sub('https','http',url)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
+        else:  # error code
+            print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
+            row['Result'], row['Details'] = e.code, getErrorDetails(e.code)
+
     except:  # catch all other errors
-        url = re.sub('https', 'http', url)
-        try:  # try again with http, instead of https
-            redirected = pingURL(url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, False)
-        except:  # try OG url (might be case specific)
-            try:
-                redirected = pingURL(ogURL)
-                row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, True)
-            except:  # try OG url again with http, instead of
-                try:
-                    url = re.sub('https', 'http', ogURL)
-                    redirected = pingURL(url)
-                    row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, False, False)
-                except: # all other errors
-                    print("{}/{} {} Failed ".format(urls.index(ogURL)+1, len(urls), ogURL))  # OG url
-                    row['Result'] = 'Failed'
-                    row['Details'] = 'Failed to establish a connection'
+        result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
+        if failed == 0:  # successful
+            if not https:
+                url = re.sub('https','http',url)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
+        elif failed == 1 and result == 'Failed':  # failed
+            print("{}/{} {} {}".format(urls.index(ogURL) + 1, len(urls), ogURL, 'Failed'))
+            row['Result'], row['Details'] = 'Failed', 'Failed to establish a connection'
+        else: # error code
+            print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, result, getErrorDetails(result)))
+            row['Result'], row['Details'] = e.code, getErrorDetails(result)
     return row
 
 def feed_the_workers(q, urls, spacing):
