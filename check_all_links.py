@@ -19,7 +19,9 @@ rows = []
 # inputs
 csv_file = input("Enter full path to csv to be read in: ")
 urls, url_column = readCSV(csv_file)
-
+filename, ext = os.path.splitext(csv_file)
+outfile = "{}_result{}".format(filename,ext)
+print(outfile)
 # urls, url_column = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # testing
 
 
@@ -139,6 +141,8 @@ def testUrl(url):
     if not url == url.strip().lower():
         url = url.strip().lower()
         urlFormatted = True
+    if "discoveryeducation" in url:  # format the url if it's discoveryEd
+        url = discoveryEd(url)
     # begin testing the url
     try: # test url with no changes
         redirected = pingURL(url)
@@ -253,7 +257,7 @@ def testUrls(urls):
 def writeCSV(rows):
     """functions to write dictionary list 'rows' to a CSV"""
     keys = [url_column, 'Result', 'Details', 'UpdatedURL']
-    with open('Result.csv', 'w', newline='') as csv_file:
+    with open(outfile, 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
         print ("writing to CSV")
         writer.writeheader()  # will create first line based on keys
@@ -298,6 +302,11 @@ def errorChecking():
     rows = sorted(rows, key=lambda i: i[url_column])
     writeCSV(rows)
 
+
+def discoveryEd(url):
+    pattern = r'([a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})'
+    guideAssetID = re.search(pattern, url)
+    return "https://connect.discoveryeducation.com/index.cfm?&cdPartner=BA34-27GQ&cdUser=26DA-9267&guidAssetID={}".format(guideAssetID[1])
 
 def main():
     """main method"""
