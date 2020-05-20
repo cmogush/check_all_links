@@ -14,14 +14,28 @@ def readCSV(csvFile):
             urlList.append(row[url_header])
     return urlList, url_header
 
+def setOutput(csv_file):
+    filename, ext = os.path.splitext(csv_file)
+    outfile = "{}_result{}".format(filename,ext)  # first add the result tag
+    if os.path.exists(outfile):  # if result tag already exists, add a number
+        outfile = "{}_result(1){}".format(filename,ext)
+    if os.path.exists(outfile):  # if number already exists, increment by 1
+        filename, ext = os.path.splitext(outfile)
+        pattern = r'\(([0-9])*\)'
+        result = re.search(pattern, filename)
+        if result:
+            numPlus = int(result[1]) + 1
+            filename = re.sub(pattern, '({})'.format(str(numPlus)), filename)
+        outfile = "{}{}".format(filename,ext)
+    print("Results will ouput to {}\n".format(outfile))
+
+
 """ Setup global variables """
 rows = []
 # inputs
 csv_file = input("Enter full path to csv to be read in: ")
 urls, url_column = readCSV(csv_file)
-filename, ext = os.path.splitext(csv_file)
-outfile = "{}_result{}".format(filename,ext)
-print(outfile)
+setOutput(csv_file)
 # urls, url_column = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # testing
 
 
@@ -290,28 +304,42 @@ def errorChecking():
     global urls
     global rows
     urls_check = []
+    count = 0
     for row in rows:
-        if row[url_column] not in urls:
+        if row[url_column] not in urls:  # guards against duplicates
             continue
         if row['Result'] == 'Failed':
+            count += 1  # count number to recheck
+            urls_check.append(row[url_column])
+    urls = urls_check # update the urls list to only those which need checked
+    # check the urls
+    for row in rows:
+        if row[url_column] not in urls: # guards against duplicates
+            continue
+        if row['Result'] == 'Failed':
+            count += 1
             # add to list to retry and remove row from rows
-            urls_check.append(row[url_column])  # add url to retry
-            rows.remove(row)
-    urls = urls_check
-    rows += testUrls(urls)
+            print("Testing ", end="")
+            newRow = testUrl(row[url_column])  # add url to retry
+            rows.remove(row)  # replace the old row..
+            rows.append(newRow)  # with the new row
+        count += 1
+        # save progress
+        if count % 100 == 0:
+            writeCSV(rows)
     rows = sorted(rows, key=lambda i: i[url_column])
     writeCSV(rows)
-
 
 def discoveryEd(url):
     pattern = r'([a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})'
     guideAssetID = re.search(pattern, url)
     return "https://connect.discoveryeducation.com/index.cfm?&cdPartner=BA34-27GQ&cdUser=26DA-9267&guidAssetID={}".format(guideAssetID[1])
 
+
 def main():
     """main method"""
     print("You may restore progress from a partially completed CSV")
-    print("Note: columns must match this exact order: url | result | details | updated url")
+    print("Note: columns must match this exact order: URL | Result | Details | UpdatedURL")
     if(input("Restore (y/n): ") == 'y'):
         partial_csv = input("Enter full path to partial csv: ")
         restoreProgress(partial_csv)
@@ -325,22 +353,22 @@ def main():
 
     # parallel process
     print("--------------------------------------------------")
-    print("Start url processing {}".format(time.ctime()))
+    print("Start Url-processing {}".format(time.ctime()))
     print("--------------------------------------------------")
     timer = time.time()
     rows = testUrlsParallel(urls)
     writeCSV(rows)
     print("--------------------------------------------------")
-    print("Completed url processing {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
+    print("Completed Url-processing {} | {} seconds elapsed".format(time.ctime(), time.time() - timer))
     print("--------------------------------------------------")
 
     # if(input("Perform error checking? (y/n): ") == 'y'):
-    print("Start error checking {}".format(time.ctime()))
+    print("Start Error-checking {}".format(time.ctime()))
     print("--------------------------------------------------")
     error_timer = time.time()
     errorChecking()
     print("--------------------------------------------------")
-    print("Completed error checking {} | {} seconds elapsed".format(time.ctime(), time.time() - error_timer))
+    print("Completed Error-checking {} | {} seconds elapsed".format(time.ctime(), time.time() - error_timer))
     print("Total run-time {}".format(time.time() - timer))
 
 if __name__ == "__main__":
