@@ -2,6 +2,7 @@ import sys, csv, time, re, socket, urllib.request, concurrent.futures, queue, os
 from urllib.error import URLError, HTTPError
 from urllib.request import urlopen, Request
 
+# CSV reading / setup
 def readCSV(csvFile):
     """ Extracts urls from a CSV file; returns results as a list"""
     urlList = []
@@ -30,8 +31,7 @@ def setOutput(csv_file):
     print("Results will ouput to {}\n".format(outfile))
     return outfile
 
-
-""" Setup global variables """
+# Setup global variables
 rows = []
 # inputs
 csv_file = input("Enter full path to csv to be read in: ")
@@ -39,6 +39,106 @@ urls, url_column = readCSV(csv_file)
 outfile = setOutput(csv_file)
 # urls, url_column = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # testing
 
+# Individual URL tests
+def pingURL(url):  # old version using urllib
+    """pings the given url and, if redirected, returns a redirected URL"""
+    redirectedURL = None
+    req = urllib.request.Request(url, headers={'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"})
+    r = urllib.request.urlopen(req)
+    ogURL = req.get_full_url()
+    finalURL = r.geturl()
+    if ogURL != finalURL and ogURL != finalURL + "/":
+        redirectedURL = finalURL
+    return redirectedURL  # o  #
+
+def testUrl(url):  # old version using url lib
+    """ function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row """
+    socket.setdefaulttimeout(30)
+    row = {url_column: url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
+
+    # setup the url for testing, make note if it had to be reformatted
+    urlFormatted = False
+    ogURL = url
+    if not url == url.strip():
+        url = url.strip()
+        urlFormatted = True
+    if "discoveryeducation" in url:  # format the url if it's discoveryEd
+        url = discoveryEd(url)
+        urlFormatted = True
+    if doubleForwardSlash(url):
+        url = doubleForwardSlash(url)
+        urlFormatted = True
+
+    # begin testing the url
+    try: # test url with no changes
+        redirected = pingURL(url)
+        row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, True)
+
+    except urllib.error.HTTPError as e:  # catch the HTTPError (response code)
+        result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
+        if failed == 0:  #succesful
+            if not https:
+                url = re.sub('https','http',url)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
+        else:  # error code
+            print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
+            row['Result'], row['Details'] = e.code, getErrorDetails(e.code)
+
+    except:  # catch all other errors
+        result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
+        if failed == 0:  # successful
+            if not https:
+                url = re.sub('https','http',url)
+            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
+        elif failed == 1 and result == 'Failed':  # failed
+            print("{}/{} {} {}".format(urls.index(ogURL) + 1, len(urls), ogURL, 'Failed'))
+            row['Result'], row['Details'] = 'Failed', 'Failed to establish a connection'
+        else: # error code
+            print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, result, getErrorDetails(result)))
+            row['Result'], row['Details'] = result, getErrorDetails(result)
+    return row
+
+# URL test helper functions
+def discoveryEd(url):
+    pattern = r'([a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})'
+    if re.search(pattern, url):  # see if an asset ID exists, and reformat link if so
+        guideAssetID = re.search(pattern, url)
+        return "https://connect.discoveryeducation.com/index.cfm?&cdPartner=BA34-27GQ&cdUser=26DA-9267&guidAssetID={}".format(guideAssetID[1])
+    return url
+
+def doubleForwardSlash(url):
+    """ replace instances of double forward slashes with single """
+    pattern = r'(.*\/\/.*)(\/\/)(.*)'
+    if re.search(pattern, url):
+        while re.search(pattern, url):  # see if an asset ID exists, and reformat link if so
+            result = re.search(pattern, url)
+            replacement = result[1] + '/' + result[3]
+            url = re.sub(pattern, replacement, url)
+    else:
+        return False
+    return url
+
+def formatRow(redirected, ogURL, url, urlFormatted, https):
+    """format the row based on the resulting variables"""
+    if redirected is None and https and not urlFormatted:  # successful condition
+        print("{}/{} {} Success".format(urls.index(ogURL)+1, len(urls), ogURL))
+        result = 'Success'
+        details = ''
+    elif redirected is None and https and urlFormatted:  # successful but original URL needs reformatted
+        print("{}/{} {} Bad Syntax | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, url))
+        result = 'Failed - Bad Syntax'
+        details = 'Failed because of capitalization, spacing, or other bad syntax; Successful as reformatted'
+        redirected = url
+    elif redirected is None:   # successful but original URL needs to be changed from https to http
+        print("{}/{} {} Change to http | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, url))
+        result = 'Failed - https'
+        details = 'Failed with https; Successful as http'
+        redirected = url
+    else: # successful but URL needs updated to RedirectedURL
+        print("{}/{} {} Redirected | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, redirected))
+        result = 'Redirected'
+        details = 'URL should be updated to match Redirected URL'
+    return result, details, redirected
 
 def getErrorDetails(response):
     """returns the corresponding details for the Error Code"""
@@ -111,41 +211,6 @@ def getErrorDetails(response):
         return responses[response]
     return ""
 
-
-def pingURL(url):
-    """pings the given url and, if redirected, returns a redirected URL"""
-    redirectedURL = None
-    req = urllib.request.Request(url, headers={'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"})
-    r = urllib.request.urlopen(req)
-    ogURL = req.get_full_url()
-    finalURL = r.geturl()
-    if ogURL != finalURL and ogURL != finalURL + "/":
-        redirectedURL = finalURL
-    return redirectedURL
-
-
-def formatRow(redirected, ogURL, url, urlFormatted, https):
-    """format the row based on the resulting variables"""
-    if redirected is None and https and not urlFormatted:  # successful condition
-        print("{}/{} {} Success".format(urls.index(ogURL)+1, len(urls), ogURL))
-        result = 'Success'
-        details = ''
-    elif redirected is None and https and urlFormatted:  # successful but original URL needs reformatted
-        print("{}/{} {} Bad Syntax | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, url))
-        result = 'Failed - Bad Syntax'
-        details = 'Failed because of capitalization, spacing, or other bad syntax; Successful as reformatted'
-        redirected = url
-    elif redirected is None:   # successful but original URL needs to be changed from https to http
-        print("{}/{} {} Change to http | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, url))
-        result = 'Failed - https'
-        details = 'Failed with https; Successful as http'
-        redirected = url
-    else: # successful but URL needs updated to RedirectedURL
-        print("{}/{} {} Redirected | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, redirected))
-        result = 'Redirected'
-        details = 'URL should be updated to match Redirected URL'
-    return result, details, redirected
-
 def subTests(url):
     """ helper function to try a number of different tests, returns 3 params
     (result, https [True/False], failed [0 - success / 1 - failed]) """
@@ -179,50 +244,19 @@ def subTests(url):
         return error, False, 1
     return 'Failed', False, failed
 
-
-def testUrl(url):
-    """function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row"""
-    socket.setdefaulttimeout(30)
-    row = {url_column: url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
-
-    # setup the url for testing, make note if it had to be reformatted
-    urlFormatted = False
-    ogURL = url
-    if not url == url.strip():
-        url = url.strip()
-        urlFormatted = True
-    if "discoveryeducation" in url:  # format the url if it's discoveryEd
-        url = discoveryEd(url)
-        urlFormatted = True
-
-    # begin testing the url
-    try: # test url with no changes
-        redirected = pingURL(url)
-        row['Result'], row['Details'], row['UpdatedURL'] = formatRow(redirected, ogURL, url, urlFormatted, True)
-
-    except urllib.error.HTTPError as e:  # catch the HTTPError (response code)
-        result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
-        if failed == 0:  #succesful
-            if not https:
-                url = re.sub('https','http',url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
-        else:  # error code
-            print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
-            row['Result'], row['Details'] = e.code, getErrorDetails(e.code)
-
-    except:  # catch all other errors
-        result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
-        if failed == 0:  # successful
-            if not https:
-                url = re.sub('https','http',url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
-        elif failed == 1 and result == 'Failed':  # failed
-            print("{}/{} {} {}".format(urls.index(ogURL) + 1, len(urls), ogURL, 'Failed'))
-            row['Result'], row['Details'] = 'Failed', 'Failed to establish a connection'
-        else: # error code
-            print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, result, getErrorDetails(result)))
-            row['Result'], row['Details'] = e.code, getErrorDetails(result)
-    return row
+# Process multiple URLs
+def testUrls(urls):
+    """functions to test a list of urls; returns a list of dictionaries used for writing a CSV"""
+    rows = []
+    count = 0
+    for url in urls:
+        print("Testing ", end="")
+        count += 1
+        row = testUrl(url)
+        rows.append(row)
+        # if count % 10 == 0:
+        #     writeCSV(rows)  # writing to CSV
+    return rows
 
 def feed_the_workers(q, urls, spacing):
     """ Simulate outside actors sending in work to do """
@@ -280,50 +314,6 @@ def testUrlsParallel(urls):
         rows = sorted(rows, key = lambda i: i[url_column])
     return rows
 
-def testUrls(urls):
-    """functions to test a list of urls; returns a list of dictionaries used for writing a CSV"""
-    rows = []
-    count = 0
-    for url in urls:
-        print("Testing ", end="")
-        count += 1
-        row = testUrl(url)
-        rows.append(row)
-        # if count % 10 == 0:
-        #     writeCSV(rows)  # writing to CSV
-    return rows
-
-def writeCSV(rows):
-    """functions to write dictionary list 'rows' to a CSV"""
-    keys = [url_column, 'Result', 'Details', 'UpdatedURL']
-    with open(outfile, 'w', newline='') as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=keys)
-        print ("writing to CSV: {}".format(outfile))
-        writer.writeheader()  # will create first line based on keys
-        writer.writerows(rows)  # turns the dictionaries into csv
-
-def checkRowComplete(row, header):
-    if row[list(header)[1]]:  # if row has results already, add it finished list of dictionaries (rows)
-        urls.remove(row[list(header)[0]])  # remove header row from urls list
-        rows.append({url_column: row[list(header)[0]], 'Result': row[list(header)[1]],
-                     'Details': row[list(header)[2]], 'UpdatedURL': row[list(header)[3]]})
-        return 1 # add one to the count if row imported
-    return 0 # else the count remains the same
-
-
-def restoreProgress(partial_csv):
-    """ Restore the progress from a partially finished CSV output """
-    count = 0
-    with open(partial_csv, 'r') as csv_f:
-        reader = csv.DictReader(csv_f)
-        header = reader.__next__() # get the headers
-        count += checkRowComplete(header, header)
-        # repeat for all remaining rows
-        for row in reader:
-            count += checkRowComplete(row, header)
-    print("{} rows read in from {}".format(count, os.path.basename(partial_csv)))
-    time.sleep(1)
-
 def errorChecking():
     """ Retry any rows which have failed with the single-process function, testUrls """
     global urls
@@ -355,14 +345,38 @@ def errorChecking():
     rows = sorted(rows, key=lambda i: i[url_column])
     writeCSV(rows)
 
-def discoveryEd(url):
-    pattern = r'([a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12})'
-    if re.search(pattern, url):  # see if an asset ID exists, and reformat link if so
-        guideAssetID = re.search(pattern, url)
-        return "https://connect.discoveryeducation.com/index.cfm?&cdPartner=BA34-27GQ&cdUser=26DA-9267&guidAssetID={}".format(guideAssetID[1])
-    return url
+# CSV writing
+def checkRowComplete(row, header):
+    if row[list(header)[1]]:  # if row has results already, add it finished list of dictionaries (rows)
+        urls.remove(row[list(header)[0]])  # remove header row from urls list
+        rows.append({url_column: row[list(header)[0]], 'Result': row[list(header)[1]],
+                     'Details': row[list(header)[2]], 'UpdatedURL': row[list(header)[3]]})
+        return 1  # add one to the count if row imported
+    return 0  # else the count remains the same
 
+def restoreProgress(partial_csv):
+    """ Restore the progress from a partially finished CSV output """
+    count = 0
+    with open(partial_csv, 'r') as csv_f:
+        reader = csv.DictReader(csv_f)
+        header = reader.__next__() # get the headers
+        count += checkRowComplete(header, header)
+        # repeat for all remaining rows
+        for row in reader:
+            count += checkRowComplete(row, header)
+    print("{} rows read in from {}".format(count, os.path.basename(partial_csv)))
+    time.sleep(1)
 
+def writeCSV(rows):
+    """functions to write dictionary list 'rows' to a CSV"""
+    keys = [url_column, 'Result', 'Details', 'UpdatedURL']
+    with open(outfile, 'w', newline='') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=keys)
+        print ("writing to CSV: {}".format(outfile))
+        writer.writeheader()  # will create first line based on keys
+        writer.writerows(rows)  # turns the dictionaries into csv
+
+# Main
 def main():
     """main method"""
     print("You may restore progress from a partially completed CSV")
