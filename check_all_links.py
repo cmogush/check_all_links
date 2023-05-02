@@ -37,6 +37,7 @@ rows = []
 csv_file = input("Enter full path to csv to be read in: ")
 urls, url_column = readCSV(csv_file)
 outfile = setOutput(csv_file)
+ad_list = readCSV(r".\Helper CSVs\adlist.csv")[0]
 # urls, url_column = getUrls(r'C:\Users\Chris\Desktop\Python Scripts\checkAllLinks\CPUniqueDomains_medium.csv') # testing
 
 # Individual URL tests
@@ -54,7 +55,7 @@ def pingURL(url):  # old version using urllib
 def testUrl(url):  # old version using url lib
     """ function that tests the url using several conditions; returns a formatted dictionary list to use as a CSV row """
     socket.setdefaulttimeout(30)
-    row = {url_column: url, 'Result': "", 'Details': "", 'UpdatedURL': ""}
+    row = {url_column: url, 'Result': "", 'Details': "", 'UpdatedURL': "", 'Ads Found': ""}
 
     # setup the url for testing, make note if it had to be reformatted
     urlFormatted = False
@@ -77,9 +78,12 @@ def testUrl(url):  # old version using url lib
     except urllib.error.HTTPError as e:  # catch the HTTPError (response code)
         result, https, failed = subTests(url)  # returns either RedirectedURL (as url or None), or error code, or failed
         if failed == 0:  #succesful
+            # check for Ads
+            adsfound = adCheck(url, ad_list)
             if not https:
                 url = re.sub('https','http',url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
+            row['Result'], row['Details'], row['UpdatedURL'], row['Ads Found'] = formatRow(result, ogURL, url, True, https, adsfound)
+            row['Ads Found'] = adsfound
         else:  # error code
             print("{}/{} {} {} | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, e.code, getErrorDetails(e.code)))
             row['Result'], row['Details'] = e.code, getErrorDetails(e.code)
@@ -89,7 +93,9 @@ def testUrl(url):  # old version using url lib
         if failed == 0:  # successful
             if not https:
                 url = re.sub('https','http',url)
-            row['Result'], row['Details'], row['UpdatedURL'] = formatRow(result, ogURL, url, True, https)
+            # check for Ads
+            adsfound = adCheck(url, ad_list)
+            row['Result'], row['Details'], row['UpdatedURL'], row['Ads Found'] = formatRow(result, ogURL, url, True, https, adsfound)
         elif failed == 1 and result == 'Failed':  # failed
             print("{}/{} {} {}".format(urls.index(ogURL) + 1, len(urls), ogURL, 'Failed'))
             row['Result'], row['Details'] = 'Failed', 'Failed to establish a connection'
@@ -118,7 +124,7 @@ def doubleForwardSlash(url):
         return False
     return url
 
-def formatRow(redirected, ogURL, url, urlFormatted, https):
+def formatRow(redirected, ogURL, url, urlFormatted, https, adsfound):
     """format the row based on the resulting variables"""
     if redirected is None and https and not urlFormatted:  # successful condition
         print("{}/{} {} Success".format(urls.index(ogURL)+1, len(urls), ogURL))
@@ -138,7 +144,7 @@ def formatRow(redirected, ogURL, url, urlFormatted, https):
         print("{}/{} {} Redirected | Update URL | {}".format(urls.index(ogURL) + 1, len(urls), ogURL, redirected))
         result = 'Redirected'
         details = 'URL should be updated to match Redirected URL'
-    return result, details, redirected
+    return result, details, redirected, adsfound
 
 def getErrorDetails(response):
     """returns the corresponding details for the Error Code"""
@@ -367,9 +373,29 @@ def restoreProgress(partial_csv):
     print("{} rows read in from {}".format(count, os.path.basename(partial_csv)))
     time.sleep(1)
 
+#open website and get data
+def getSiteData(test_url):
+    webUrl = urllib.request.urlopen(test_url)
+    data = webUrl.read()
+    return str(data)
+
+#scan for websites from the adlist.csv on the landing page
+def adCheck(test_url, ad_list):
+    ads = []
+    data = getSiteData(test_url)
+    pattern = r"[ftp|http]{3,4}[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
+    urls = re.findall(pattern, data)
+    print(urls)
+    for ad_site in ad_list:
+        if re.search(ad_site, data):
+            ads.append(ad_site)
+    if ads == []:
+        return ""
+    return ads
+
 def writeCSV(rows):
     """functions to write dictionary list 'rows' to a CSV"""
-    keys = [url_column, 'Result', 'Details', 'UpdatedURL']
+    keys = [url_column, 'Result', 'Details', 'UpdatedURL', 'Ads Found']
     with open(outfile, 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=keys)
         print ("writing to CSV: {}".format(outfile))

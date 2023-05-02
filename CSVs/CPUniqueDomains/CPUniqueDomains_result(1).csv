@@ -1,0 +1,90 @@
+UNIQUE_DOMAINS,Result,Details,UpdatedURL
+https://0.tqn.com,Success,,
+https://1.bp.blogspot.com,Success,,
+https://103orchard.tenement.org,Redirected,URL should be updated to match Redirected URL,https://103orchard.tenement.org/stories/103-orchard/
+https://2.bp.blogspot.com,Success,,
+https://2000clicks.com,Failed - https,Failed with https; Successful as http,http://2000clicks.com
+https://2008sec2lit.blogspot.com,Success,,
+https://2012books.lardbucket.org,Success,,
+https://208.69.168.83,Failed,Failed to establish a connection,
+https://221bakerstreet.org,Failed - https,Failed with https; Successful as http,http://221bakerstreet.org
+https://230nsc1.phy-astr.gsu.edu,Failed - https,Failed with https; Successful as http,http://230nsc1.phy-astr.gsu.edu
+https://3.bp.blogspot.com,Success,,
+https://3dparks.wr.usgs.gov,Redirected,URL should be updated to match Redirected URL,https://www.usgs.gov/science-support/osqi/yes/national-parks/
+https://454.com,Failed,Failed to establish a connection,
+https://64.233.167.104,Redirected,URL should be updated to match Redirected URL,http://www.google.com/
+https://6abc.com,Success,,
+https://712educators.about.com,Redirected,URL should be updated to match Redirected URL,https://www.thoughtco.com/secondary-education-4132504
+https://7gables.org,Success,,
+https://8fit.com,Success,,
+https://Media.edisonlearning.com,Redirected,URL should be updated to match Redirected URL,http://media.edisonlearning.com/
+https://Myplate.gov,Redirected,URL should be updated to match Redirected URL,https://www.choosemyplate.gov/
+https://a4esl.org,Failed - https,Failed with https; Successful as http,http://a4esl.org
+https://aabme.asme.org,Success,,
+https://aakp.org,Success,,
+https://aarongce.wordpress.com,Success,,
+https://aasa.org,Redirected,URL should be updated to match Redirected URL,https://aasa.org/home/
+https://abacus.bates.edu,Success,,
+https://abcnews.go.com,Success,,
+https://abetterchemtext.com,Success,,
+https://aboutforensics.co.uk,Success,,
+https://abovetheinfluence.com,Success,,
+https://absoluteshakespeare.com,Success,,
+https://abyss.uoregon.edu,Failed - https,Failed with https; Successful as http,http://abyss.uoregon.edu
+https://academic.brooklyn.cuny.edu,Success,,
+https://academic.oup.com,Redirected,URL should be updated to match Redirected URL,https://academic.oup.com/journals
+https://academic.reed.edu,Redirected,URL should be updated to match Redirected URL,https://www.reed.edu/
+https://academichelp.net,Success,,
+https://academics.aces.illinois.,Failed,Failed to establish a connection,
+https://academics.utep.edu,Redirected,URL should be updated to match Redirected URL,https://www.utep.edu
+https://academo.org,Success,,
+https://academy.allaboutbirds.org,Success,,
+https://acc6.its.brooklyn.cuny.edu,Failed - https,Failed with https; Successful as http,http://acc6.its.brooklyn.cuny.edu
+https://accedian.com,Success,,
+https://accel.wisconsinpublicservice.com,Success,,
+https://accessmedicine.mhmedical.com,Success,,
+https://acdis.illinois.edu,Success,,
+https://ace.fsu.edu,Success,,
+https://aclu-de.org,Redirected,URL should be updated to match Redirected URL,https://www.aclu-de.org/
+https://acmcu.georgetown.edu,Success,,
+https://act-r.psy.cmu.edu,Failed - https,Failed with https; Successful as http,http://act-r.psy.cmu.edu
+https://activefiremaps.fs.fed.us/,Failed,Failed to establish a connection,
+https://actrav.itcilo.org,Failed,Failed to establish a connection,
+https://adage.com,Success,,
+https://adam.about.com,Redirected,URL should be updated to match Redirected URL,https://www.verywellhealth.com/
+https://adminsecret.monster.com,Redirected,URL should be updated to match Redirected URL,https://www.monster.com/404
+https://adprima.com,Success,,
+https://adventure.howstuffworks.com,Success,,
+https://advice.writing.utoronto.ca,Success,,
+https://aether.lbl.gov,Success,,
+https://afdc.energy.gov,Success,,
+https://afe.easia.columbia.,Failed,Failed to establish a connection,
+https://aflcio.org,Success,,
+https://africanhistory.about.com,Redirected,URL should be updated to match Redirected URL,https://www.thoughtco.com/african-history-4133338
+https://aggie-horticulture.tamu.edu,Success,,
+https://agni.phys.iit.edu,Failed - https,Failed with https; Successful as http,http://agni.phys.iit.edu
+https://agsci.oregonstate.edu,Success,,
+https://aidsinfo.nih.gov,Success,,
+https://airandspace.si.edu,Success,,
+https://airnow.gov,Redirected,URL should be updated to match Redirected URL,https://www.airnow.gov/
+https://ak.water.usgs.gov,Redirected,URL should be updated to match Redirected URL,https://www.usgs.gov/centers/asc/
+https://ako.net.nz,Failed,Failed to establish a connection,
+https://alandix.com,Success,,
+https://albalearning.com,Success,,
+https://aleph0.clarku.edu,Redirected,URL should be updated to match Redirected URL,https://mathcs.clarku.edu/
+https://alevelbiology.co.uk,Success,,
+https://alex.state.al.,Failed,Failed to establish a connection,
+https://alexandriava.gov,Redirected,URL should be updated to match Redirected URL,https://www.alexandriava.gov/
+https://aliscot.com,Success,,
+https://allairevillage.org,Success,,
+https://allpoetry.com,Success,,
+https://allpsych.com,Success,,
+https://allthingsliberty.com,Success,,
+https://alt.hobart.k12.in.us,Success,,
+https://alumni.media.mit.edu,Success,,
+https://amazing-space.stsci.edu,Success,,
+https://amb.cult.bg,Failed,Failed to establish a connection,
+https://ambergriscaye.com,Success,,
+https://amediavoz.com,Failed - https,Failed with https; Successful as http,http://amediavoz.com
+https://americanbookreview.org,Failed - https,Failed with https; Successful as http,http://americanbookreview.org
+https://americanfolklore.net,Success,,

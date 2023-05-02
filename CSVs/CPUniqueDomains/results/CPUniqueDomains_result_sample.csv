@@ -1,0 +1,55 @@
+UNIQUE_DOMAINS,Result,Details,UpdatedURL
+https://0.tqn.com,403,"('Forbidden', 'Request forbidden -- authorization will not help')",
+https://1.bp.blogspot.com,404,"('Not Found', 'Nothing matches the given URI')",
+https://10.192.200.243,Failed to connect,,
+https://103orchard.tenement.org,Redirected,Change to Redirected URL,https://103orchard.tenement.org/stories/103-orchard/
+https://2.bp.blogspot.com,404,"('Not Found', 'Nothing matches the given URI')",
+https://2000clicks.com,Https Failed,Change to Http URL,http://2000clicks.com
+https://2008sec2lit.blogspot.com,Success,,
+https://2012books.lardbucket.org,Success,,
+https://208.69.168.83,Failed to connect,,
+https://221bakerstreet.org,Failed to connect,,
+https://230nsc1.phy-astr.gsu.edu,Https Failed,Change to Http URL,http://230nsc1.phy-astr.gsu.edu
+https://2wheeledlife.com,Https Failed,Change to Http URL,http://2wheeledlife.com
+https://3.bp.blogspot.com,404,"('Not Found', 'Nothing matches the given URI')",
+https://3dparks.wr.usgs.gov,Redirected,Change to Redirected URL,https://www.usgs.gov/science-support/osqi/yes/national-parks/
+https://454.com,Failed to connect,,
+https://64.233.167.104,Redirected,Change to Redirected URL,http://www.google.com/
+https://6abc.com,Success,,
+https://712educators.about.com,Redirected,Change to Redirected URL,https://www.thoughtco.com/secondary-education-4132504
+https://74.125.47.132,Failed to connect,,
+https://7gables.org,Success,,
+https://8fit.com,Success,,
+https://Media.edisonlearning.com,Failed to connect,,
+https://Myplate.gov,403,"('Forbidden', 'Request forbidden -- authorization will not help')",
+https://a4esl.org,Https Failed,Change to Http URL,http://a4esl.org
+https://aa.usno.navy.mil,Failed to connect,,
+https://aabme.asme.org,Success,,
+https://aakp.org,Success,,
+https://aarongce.wordpress.com,Success,,
+https://aasa.org,Redirected,Change to Redirected URL,https://aasa.org/home/
+https://abacus.bates.edu,Success,,
+https://abcnews.go.com,Success,,
+https://abetterchemtext.com,Success,,
+https://aboutforensics.co.uk,Success,,
+https://abovetheinfluence.com,Success,,
+https://absoluteshakespeare.com,Success,,
+https://abyss.uoregon.edu,Failed to connect,,
+https://academic.brooklyn.cuny.edu,Success,,
+https://academic.oup.com,Redirected,Change to Redirected URL,https://academic.oup.com/journals
+https://academic.reed.edu,Redirected,Change to Redirected URL,https://www.reed.edu/
+https://academichelp.net,Success,,
+https://academics.aces.illinois.,Failed to connect,,
+https://academics.triton.edu,Https Failed,Change to Http URL,http://academics.triton.edu
+https://academics.utep.edu,Redirected,Change to Redirected URL,https://www.utep.edu/
+https://academo.org,Success,,
+https://academy.allaboutbirds.org,Success,,
+https://acc6.its.brooklyn.cuny.edu,Https Failed,Change to Http URL,http://acc6.its.brooklyn.cuny.edu
+https://accedian.com,Success,,
+https://accel.wisconsinpublicservice.com,Success,,
+https://accessmedicine.mhmedical.com,Success,,
+https://acdis.illinois.edu,Success,,
+https://ace.fsu.edu,Success,,
+https://aclu-de.org,Redirected,Change to Redirected URL,https://www.aclu-de.org/
+https://acmcu.georgetown.edu,Success,,
+https://act-r.psy.cmu.edu,Https Failed,Change to Http URL,http://act-r.psy.cmu.edu
